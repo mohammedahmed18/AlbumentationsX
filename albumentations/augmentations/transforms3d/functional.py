@@ -293,31 +293,33 @@ def keypoints_rot90(
         np.ndarray: Rotated keypoints with same shape as input.
 
     """
-    if k == 0 or len(keypoints) == 0:
+    if k == 0 or keypoints.shape[0] == 0:
         return keypoints
 
     # Normalize factor to range [0, 3]
-    k = ((k % 4) + 4) % 4
+    k = k % 4
+    if k == 0:  # Redundant, so shortcut before copying
+        return keypoints
 
+    # NOTE: np.take is used to avoid constructing lists in the hot loop
+    dims0, dims1 = volume_shape[axes[0]], volume_shape[axes[1]]
+    # work on coordinates as variables to allow efficient assignment
     result = keypoints.copy()
+    coords1 = keypoints[:, axes[0]]
+    coords2 = keypoints[:, axes[1]]
 
-    # Get dimensions for the rotation axes
-    dims = [volume_shape[ax] for ax in axes]
-
-    # Get coordinates to rotate
-    coords1 = result[:, axes[0]].copy()
-    coords2 = result[:, axes[1]].copy()
-
-    # Apply rotation based on factor (counterclockwise)
     if k == 1:  # 90 degrees CCW
-        result[:, axes[0]] = (dims[1] - 1) - coords2
+        # (x, y) -> (y, dims0-1-x)
+        result[:, axes[0]] = (dims1 - 1) - coords2
         result[:, axes[1]] = coords1
     elif k == 2:  # 180 degrees
-        result[:, axes[0]] = (dims[0] - 1) - coords1
-        result[:, axes[1]] = (dims[1] - 1) - coords2
+        # (x, y) -> (dims0-1-x, dims1-1-y)
+        result[:, axes[0]] = (dims0 - 1) - coords1
+        result[:, axes[1]] = (dims1 - 1) - coords2
     elif k == 3:  # 270 degrees CCW
+        # (x, y) -> (dims1-1-y, x)
         result[:, axes[0]] = coords2
-        result[:, axes[1]] = (dims[0] - 1) - coords1
+        result[:, axes[1]] = (dims0 - 1) - coords1
 
     return result
 
@@ -346,10 +348,8 @@ def transform_cube_keypoints(
     # Create working copy preserving all columns
     working_points = keypoints.copy()
 
-    # Convert only XYZ coordinates to HWD, keeping other columns unchanged
-    xyz = working_points[:, :3]  # Get first 3 columns (XYZ)
-    xyz = xyz[:, [2, 1, 0]]  # XYZ -> HWD
-    working_points[:, :3] = xyz  # Put back transformed coordinates
+    # Convert only XYZ coordinates to HWD, keeping other columns unchanged (in-place)
+    working_points[:, :3] = working_points[:, [2, 1, 0]]
 
     current_shape = volume_shape
 
@@ -358,23 +358,23 @@ def transform_cube_keypoints(
         working_points[:, 2] = current_shape[2] - 1 - working_points[:, 2]  # Reflect W axis
 
     rotation_index = index % 24
+    # Precompute shapes and axes to minimize if/elif calculations
 
-    # Apply the same rotation logic as transform_cube
+    # All branches operate on (num_keypoints, N>=3) arrays, can reuse memory
     if rotation_index < 4:
         # First 4: rotate around axis 0
         result = keypoints_rot90(working_points, k=rotation_index, axes=(1, 2), volume_shape=current_shape)
     elif rotation_index < 8:
         # Next 4: flip 180° about axis 1, then rotate around axis 0
         temp = keypoints_rot90(working_points, k=2, axes=(0, 2), volume_shape=current_shape)
-        result = keypoints_rot90(temp, k=rotation_index - 4, axes=(1, 2), volume_shape=volume_shape)
+        result = keypoints_rot90(temp, k=rotation_index - 4, axes=(1, 2), volume_shape=current_shape)
     elif rotation_index < 16:
+        temp_shape = (current_shape[2], current_shape[1], current_shape[0])
         if rotation_index < 12:
             temp = keypoints_rot90(working_points, k=1, axes=(0, 2), volume_shape=current_shape)
-            temp_shape = (current_shape[2], current_shape[1], current_shape[0])
             result = keypoints_rot90(temp, k=rotation_index - 8, axes=(0, 1), volume_shape=temp_shape)
         else:
             temp = keypoints_rot90(working_points, k=3, axes=(0, 2), volume_shape=current_shape)
-            temp_shape = (current_shape[2], current_shape[1], current_shape[0])
             result = keypoints_rot90(temp, k=rotation_index - 12, axes=(0, 1), volume_shape=temp_shape)
     elif rotation_index < 20:
         temp = keypoints_rot90(working_points, k=1, axes=(0, 1), volume_shape=current_shape)
@@ -385,9 +385,7 @@ def transform_cube_keypoints(
         temp_shape = (current_shape[1], current_shape[0], current_shape[2])
         result = keypoints_rot90(temp, k=rotation_index - 20, axes=(0, 2), volume_shape=temp_shape)
 
-    # Convert back from HWD to XYZ coordinates for first 3 columns only
-    xyz = result[:, :3]
-    xyz = xyz[:, [2, 1, 0]]  # HWD -> XYZ
-    result[:, :3] = xyz
+    # Convert back from HWD to XYZ coordinates for first 3 columns only (in-place)
+    result[:, :3] = result[:, [2, 1, 0]]
 
     return result
