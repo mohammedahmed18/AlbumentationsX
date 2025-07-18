@@ -302,11 +302,11 @@ def keypoints_rot90(
     result = keypoints.copy()
 
     # Get dimensions for the rotation axes
-    dims = [volume_shape[ax] for ax in axes]
+    dims = [volume_shape[axes[0]], volume_shape[axes[1]]]
 
     # Get coordinates to rotate
-    coords1 = result[:, axes[0]].copy()
-    coords2 = result[:, axes[1]].copy()
+    coords1 = keypoints[:, axes[0]]
+    coords2 = keypoints[:, axes[1]]
 
     # Apply rotation based on factor (counterclockwise)
     if k == 1:  # 90 degrees CCW
