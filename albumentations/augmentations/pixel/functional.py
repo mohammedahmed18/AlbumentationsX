@@ -3818,7 +3818,7 @@ def get_normalizer(method: Literal["vahadane", "macenko"]) -> StainNormalizer:
         StainNormalizer: Stain normalizer.
 
     """
-    return VahadaneNormalizer() if method == "vahadane" else MacenkoNormalizer()
+    return _VAHADANE_NORMALIZER if method == "vahadane" else _MACENKO_NORMALIZER
 
 
 class StainNormalizer:
@@ -4242,3 +4242,8 @@ def separable_convolve(img: np.ndarray, kernel: np.ndarray) -> np.ndarray:
     """
     conv_fn = maybe_process_in_chunks(cv2.sepFilter2D, ddepth=-1, kernelX=kernel, kernelY=kernel)
     return conv_fn(img)
+
+
+_VAHADANE_NORMALIZER = VahadaneNormalizer()
+
+_MACENKO_NORMALIZER = MacenkoNormalizer()
