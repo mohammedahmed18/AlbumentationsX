@@ -40,6 +40,30 @@ from albumentations.core.type_definitions import (
 
 from . import functional as fgeometric
 
+"""Geometric transformations for flip and symmetry operations.
+
+This module contains transforms that apply various flip and symmetry operations
+to images and other target types. These transforms modify the geometric arrangement
+of the input data while preserving the pixel values themselves.
+
+Available transforms:
+- VerticalFlip: Flips the input upside down (around the x-axis)
+- HorizontalFlip: Flips the input left to right (around the y-axis)
+- Transpose: Swaps rows and columns (flips around the main diagonal)
+- D4: Applies one of eight possible square symmetry transformations (dihedral group D4)
+- SquareSymmetry: Alias for D4 with a more intuitive name
+
+These transforms are particularly useful for:
+- Data augmentation to improve model generalization
+- Addressing orientation biases in training data
+- Working with data that doesn't have a natural orientation (e.g., satellite imagery)
+- Exploiting symmetries in the problem domain
+
+All transforms support various target types including images, masks, bounding boxes,
+keypoints, volumes, and 3D masks, ensuring consistent transformation across
+different data modalities.
+"""
+
 __all__ = [
     "D4",
     "HorizontalFlip",
@@ -180,7 +204,7 @@ class HorizontalFlip(DualTransform):
         return self.apply_to_images(mask3d, **params)
 
     def apply_to_masks3d(self, masks3d: np.ndarray, **params: Any) -> np.ndarray:
-        return self.apply_to_volumes(masks3d, **params)
+        return fgeometric.hflip_volumes(masks3d)
 
 
 class Transpose(DualTransform):
