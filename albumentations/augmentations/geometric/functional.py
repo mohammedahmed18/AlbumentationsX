@@ -3946,7 +3946,7 @@ def vflip_images(volume: np.ndarray) -> np.ndarray:
         np.ndarray: Vertically flipped volume.
 
     """
-    return np.flip(volume, axis=1)
+    return volume[:, ::-1]
 
 
 def hflip_volumes(volumes: np.ndarray) -> np.ndarray:
