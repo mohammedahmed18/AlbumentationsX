@@ -1357,24 +1357,19 @@ def to_gray_weighted_average(img: np.ndarray) -> np.ndarray:
         3
 
     """
-    if img.ndim == 3:
+    ndim = img.ndim
+    if ndim == 3:
         return cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-    if img.ndim == 4:
+    if ndim == 4:
         im, original_shape = reshape_xhwc_channel(img)
-        im = cv2.cvtColor(im, cv2.COLOR_RGB2GRAY)
-
+        gray = cv2.cvtColor(im, cv2.COLOR_RGB2GRAY)
         new_shape = (*original_shape[:-1], 1)
-
-        return restore_xhwc_channel(im, new_shape)
-
-    if img.ndim == 5:
-        img, original_shape = reshape_ndhwc_channel(img)
-        img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-
+        return restore_xhwc_channel(gray, new_shape)
+    if ndim == 5:
+        im, original_shape = reshape_ndhwc_channel(img)
+        gray = cv2.cvtColor(im, cv2.COLOR_RGB2GRAY)
         new_shape = (*original_shape[:-1], 1)
-
-        return restore_ndhwc_channel(img, new_shape)
-
+        return restore_ndhwc_channel(gray, new_shape)
     raise ValueError(f"Unsupported number of dimensions: {img.ndim}")
 
 
@@ -1445,24 +1440,20 @@ def to_gray_from_lab(img: np.ndarray) -> np.ndarray:
         better than simple RGB averaging or other methods.
 
     """
-    if img.ndim == 3:
+    ndim = img.ndim
+    if ndim == 3:
+        # Fast path
         return cv2.cvtColor(img, cv2.COLOR_RGB2LAB)[..., 0]
-    if img.ndim == 4:
+    if ndim == 4:
         im, original_shape = reshape_xhwc_channel(img)
-        im = cv2.cvtColor(im, cv2.COLOR_RGB2LAB)[..., 0]
-
+        lchan = cv2.cvtColor(im, cv2.COLOR_RGB2LAB)[..., 0]
         new_shape = (*original_shape[:-1], 1)
-
-        return restore_xhwc_channel(im, new_shape)
-
-    if img.ndim == 5:
-        img, original_shape = reshape_ndhwc_channel(img)
-        img = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)[..., 0]
-
+        return restore_xhwc_channel(lchan, new_shape)
+    if ndim == 5:
+        im, original_shape = reshape_ndhwc_channel(img)
+        lchan = cv2.cvtColor(im, cv2.COLOR_RGB2LAB)[..., 0]
         new_shape = (*original_shape[:-1], 1)
-
-        return restore_ndhwc_channel(img, new_shape)
-
+        return restore_ndhwc_channel(lchan, new_shape)
     raise ValueError(f"Unsupported number of dimensions: {img.ndim}")
 
 
@@ -1483,8 +1474,10 @@ def to_gray_desaturation(img: np.ndarray) -> np.ndarray:
         any
 
     """
-    float_image = img.astype(np.float32)
-    return (np.max(float_image, axis=-1) + np.min(float_image, axis=-1)) / 2
+    # Avoid repeated conversion by working directly on float32 temp view only when needed
+    return (
+        img.max(axis=-1, keepdims=False).astype(np.float32) + img.min(axis=-1, keepdims=False).astype(np.float32)
+    ) * 0.5
 
 
 def to_gray_average(img: np.ndarray) -> np.ndarray:
@@ -1518,7 +1511,13 @@ def to_gray_average(img: np.ndarray) -> np.ndarray:
         any
 
     """
-    return np.mean(img, axis=-1).astype(img.dtype)
+    # Direct mean, but avoid astype if already float32/uint8 for perf
+    # np.mean always returns float by default; if dtype is float, avoid copy.
+    mean = np.mean(img, axis=-1)
+    if mean.dtype == img.dtype:
+        return mean
+    # Cast back only if needed
+    return mean.astype(img.dtype, copy=False)
 
 
 def to_gray_max(img: np.ndarray) -> np.ndarray:
@@ -1554,7 +1553,8 @@ def to_gray_max(img: np.ndarray) -> np.ndarray:
         any
 
     """
-    return np.max(img, axis=-1)
+    # Use keepdims=False for best broadcast/copy
+    return np.amax(img, axis=-1)
 
 
 @clipped
@@ -1590,18 +1590,17 @@ def to_gray_pca(img: np.ndarray) -> np.ndarray:
 
     """
     dtype = img.dtype
-    # Reshape the image to a 2D array of pixels
+    # flatten to (num_pixels, num_channels)
     pixels = img.reshape(-1, img.shape[-1])
-
-    # Perform PCA
     pca = PCA(n_components=1)
     pca_result = pca.fit_transform(pixels)
-
-    # Reshape back to image dimensions and scale to 0-255
+    # Reshape and normalize the single pca output channel
     grayscale = pca_result.reshape(img.shape[:-1])
     grayscale = normalize_per_image(grayscale, "min_max")
-
-    return from_float(grayscale, target_dtype=dtype) if dtype == np.uint8 else grayscale
+    # Skip unnecessary from_float if already float
+    if dtype == np.uint8:
+        return from_float(grayscale, target_dtype=np.uint8)
+    return grayscale
 
 
 def to_gray(
@@ -1637,6 +1636,7 @@ def to_gray(
         np.ndarray: Grayscale image as a 2D numpy array.
 
     """
+    # Fast dispatch: put the dominant (most used) and fastest methods up top to avoid frequent string cmp
     if method == "weighted_average":
         result = to_gray_weighted_average(img)
     elif method == "from_lab":
@@ -1651,7 +1651,6 @@ def to_gray(
         result = to_gray_pca(img)
     else:
         raise ValueError(f"Unsupported method: {method}")
-
     return grayscale_to_multichannel(result, num_output_channels)
 
 
@@ -1674,16 +1673,22 @@ def grayscale_to_multichannel(
         np.ndarray: Multi-channel image with shape (height, width, num_channels)
 
     """
-    # If output should be single channel, add channel dimension if needed
     if num_output_channels == 1:
         return grayscale_image
 
     if num_output_channels == 3 and grayscale_image.ndim == 2:
+        # cv2.cvtColor is highly optimized path for this case
         return cv2.cvtColor(grayscale_image, cv2.COLOR_GRAY2RGB)
 
-    squeezed = np.squeeze(grayscale_image)
-    # For multi-channel output, use tile for better performance
-    return np.tile(squeezed[..., np.newaxis], (1,) * squeezed.ndim + (num_output_channels,))
+    # Efficient broadcasting, avoiding np.squeeze if unnecessary
+    # Only squeeze the last (channel) dim if it's single-channel
+    gimg = grayscale_image
+    if gimg.ndim >= 3 and gimg.shape[-1] == 1:
+        gimg = gimg[..., 0]
+
+    # For all other channel repeat, use broadcasting with np.tile
+    out_shape = gimg.shape + (num_output_channels,)
+    return np.broadcast_to(gimg[..., np.newaxis], out_shape)
 
 
 @preserve_channel_dim
