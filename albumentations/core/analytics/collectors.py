@@ -152,7 +152,7 @@ def get_cpu_model() -> str:
     """Get CPU model name in a simplified way."""
     # First try platform.processor() - often gives good info
     processor = platform.processor()
-    if processor and processor not in ["", "unknown", "arm", "arm64", "x86_64", "i386", "AMD64", "aarch64"]:
+    if processor and processor not in _GENERIC_PROCESSORS:
         return processor
 
     # Special handling for Apple Silicon on macOS
@@ -174,15 +174,7 @@ def get_cpu_model() -> str:
     # Fallback to machine architecture
     if machine := platform.machine():
         # Provide meaningful names for common architectures
-        arch_names = {
-            "arm64": "ARM64",
-            "aarch64": "ARM64",
-            "x86_64": "x86-64",
-            "AMD64": "x86-64",
-            "i386": "x86",
-            "i686": "x86",
-        }
-        return arch_names.get(machine, machine)
+        return _ARCH_NAMES.get(machine, machine)
 
     return "Unknown"
 
@@ -384,3 +376,15 @@ def collect_pipeline_info(compose: Compose) -> dict[str, Any]:
         "targets": targets,
         "pipeline_hash": pipeline_hash,
     }
+
+
+_GENERIC_PROCESSORS = {"", "unknown", "arm", "arm64", "x86_64", "i386", "AMD64", "aarch64"}
+
+_ARCH_NAMES = {
+    "arm64": "ARM64",
+    "aarch64": "ARM64",
+    "x86_64": "x86-64",
+    "AMD64": "x86-64",
+    "i386": "x86",
+    "i686": "x86",
+}
