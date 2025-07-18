@@ -8,7 +8,6 @@ and pixel distribution matching with various normalization techniques.
 from __future__ import annotations
 
 import abc
-from copy import deepcopy
 from typing import Literal
 
 import cv2
@@ -287,11 +286,13 @@ class DomainAdapter:
         ref_img: np.ndarray,
         color_conversions: tuple[None, None] = (None, None),
     ):
-        self.color_in, self.color_out = color_conversions
-        self.source_transformer = deepcopy(transformer)
+        # Remove deepcopy overhead by copying parameters and creating a new instance
+        # This assumes transformer is a scikit-learn-like estimator
+        self.source_transformer = type(transformer)(**getattr(transformer, "get_params", lambda deep=True: {})())
         self.target_transformer = transformer
         self.num_channels = get_num_channels(ref_img)
-        self.target_transformer.fit(self.flatten(ref_img))
+        ref_pixels = self.flatten(ref_img)
+        self.target_transformer.fit(ref_pixels)
 
     def to_colorspace(self, img: np.ndarray) -> np.ndarray:
         """Convert the image to the target color space.
