@@ -39,6 +39,13 @@ from albumentations.core.type_definitions import (
     REFLECT_BORDER_MODES,
 )
 
+"""Functional implementations of geometric image transformations.
+
+This module provides low-level functions for geometric operations such as rotation,
+resizing, flipping, perspective transforms, and affine transformations on images,
+bounding boxes and keypoints.
+"""
+
 PAIR = 2
 
 ROT90_180_FACTOR = 2

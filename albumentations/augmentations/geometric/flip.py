@@ -236,7 +236,7 @@ class Transpose(DualTransform):
     _targets = ALL_TARGETS
 
     def apply(self, img: np.ndarray, **params: Any) -> np.ndarray:
-        return fgeometric.transpose(img)
+        return img.swapaxes(0, 1)
 
     def apply_to_bboxes(self, bboxes: np.ndarray, **params: Any) -> np.ndarray:
         return fgeometric.bboxes_transpose(bboxes)
