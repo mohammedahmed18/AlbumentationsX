@@ -141,10 +141,7 @@ class MinMaxScaler(BaseScaler):
                 "Call 'fit' with appropriate arguments before using this estimator.",
             )
 
-        x_std = np.subtract(x, self.data_min).astype(float)
-        np.divide(x_std, self.data_range, out=x_std)
-        np.multiply(x_std, (self.max - self.min), out=x_std)
-        np.add(x_std, self.min, out=x_std)
+        x_std = ((x.astype(float) - self.data_min) / self.data_range) * (self.max - self.min) + self.min
 
         return x_std
 
