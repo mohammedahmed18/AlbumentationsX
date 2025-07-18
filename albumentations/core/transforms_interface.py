@@ -99,7 +99,7 @@ class BasicTransform(Serializable, metaclass=CombinedMeta):
         self.seed: int | None = None
         self.set_random_seed(self.seed)
         self._strict = False  # Use private attribute
-        self.invalid_args: list[str] = []  # Store invalid args found during init
+        self.invalid_args = ()  # Use immutable tuple to minimize memory
 
     @property
     def strict(self) -> bool:
