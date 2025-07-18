@@ -4240,5 +4240,21 @@ def separable_convolve(img: np.ndarray, kernel: np.ndarray) -> np.ndarray:
         np.ndarray: Convolved image.
 
     """
-    conv_fn = maybe_process_in_chunks(cv2.sepFilter2D, ddepth=-1, kernelX=kernel, kernelY=kernel)
+    conv_fn = _get_conv_fn_for_kernel(kernel)
     return conv_fn(img)
+
+
+def _get_conv_fn_for_kernel(kernel: np.ndarray):
+    # Use kernel data shape+contents as cache key
+    key = (kernel.shape, kernel.dtype, kernel.tobytes())
+    if key not in _conv_fn_cache:
+        _conv_fn_cache[key] = maybe_process_in_chunks(
+            cv2.sepFilter2D,
+            ddepth=-1,
+            kernelX=kernel,
+            kernelY=kernel,
+        )
+    return _conv_fn_cache[key]
+
+
+_conv_fn_cache = {}
