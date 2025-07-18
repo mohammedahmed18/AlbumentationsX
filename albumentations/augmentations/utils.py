@@ -266,8 +266,21 @@ class PCA:
             >>> print(transformed.shape)  # (100, 3)
 
         """
-        self.fit(x)
-        return self.transform(x)
+        x = x.astype(np.float64, copy=False)
+        n_samples, n_features = x.shape
+
+        if self.n_components is None:
+            n_components = min(n_samples, n_features)
+        else:
+            n_components = self.n_components
+
+        from cv2 import PCACompute2, PCAProject
+
+        mean, eigenvectors, eigenvalues = PCACompute2(x, mean=None, maxComponents=n_components)
+        self.mean = mean
+        self.components_ = eigenvectors
+        self.explained_variance_ = eigenvalues.flatten()
+        return PCAProject(x, mean, eigenvectors)
 
     def inverse_transform(self, x: np.ndarray) -> np.ndarray:
         """Transform data back to the original space.
