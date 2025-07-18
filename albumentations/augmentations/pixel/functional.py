@@ -1241,7 +1241,7 @@ def volume_channel_shuffle(volume: np.ndarray, channels_shuffled: Sequence[int])
         np.ndarray: Volume with channels shuffled.
 
     """
-    return volume.copy()[..., channels_shuffled] if volume.ndim == 4 else volume
+    return volume[..., channels_shuffled] if volume.ndim == 4 else volume
 
 
 def volumes_channel_shuffle(volumes: np.ndarray, channels_shuffled: Sequence[int]) -> np.ndarray:
