@@ -2202,14 +2202,7 @@ def _distort_channel(
     width: int,
     interpolation: int,
 ) -> np.ndarray:
-    map_x, map_y = cv2.initUndistortRectifyMap(
-        cameraMatrix=camera_mat,
-        distCoeffs=distortion_coeffs,
-        R=None,
-        newCameraMatrix=camera_mat,
-        size=(width, height),
-        m1type=cv2.CV_32FC1,
-    )
+    map_x, map_y = _get_distort_map(camera_mat, distortion_coeffs, height, width, interpolation)
     return cv2.remap(
         channel,
         map_x,
@@ -4242,3 +4235,27 @@ def separable_convolve(img: np.ndarray, kernel: np.ndarray) -> np.ndarray:
     """
     conv_fn = maybe_process_in_chunks(cv2.sepFilter2D, ddepth=-1, kernelX=kernel, kernelY=kernel)
     return conv_fn(img)
+
+
+def _get_distort_map(
+    camera_mat: np.ndarray,
+    distortion_coeffs: np.ndarray,
+    height: int,
+    width: int,
+    interpolation: int,
+):
+    key = (height, width, tuple(float(x) for x in distortion_coeffs), interpolation)
+    if key not in _DISTORT_MAP_CACHE:
+        map_x, map_y = cv2.initUndistortRectifyMap(
+            cameraMatrix=camera_mat,
+            distCoeffs=distortion_coeffs,
+            R=None,
+            newCameraMatrix=camera_mat,
+            size=(width, height),
+            m1type=cv2.CV_32FC1,
+        )
+        _DISTORT_MAP_CACHE[key] = (map_x, map_y)
+    return _DISTORT_MAP_CACHE[key]
+
+
+_DISTORT_MAP_CACHE = {}
