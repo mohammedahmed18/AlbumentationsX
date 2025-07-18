@@ -3258,31 +3258,25 @@ def apply_gaussian_illumination(
     # Pre-compute constants
     center_x = width * center[0]
     center_y = height * center[1]
-    sigma2 = 2 * (max(height, width) * sigma) ** 2  # Pre-compute denominator
+    sigma2 = 2 * (max(height, width) * sigma) ** 2
 
-    # Create coordinate grid and calculate distances in-place
-    y, x = np.ogrid[:height, :width]
-    x = x.astype(np.float32)
-    y = y.astype(np.float32)
-    x -= center_x
-    y -= center_y
+    # Create coordinate arrays using broadcasting
+    y = np.arange(height, dtype=np.float32) - center_y
+    x = np.arange(width, dtype=np.float32) - center_x
 
-    # Calculate squared distances in-place
-    cv2.multiply(x, x, dst=x)
-    cv2.multiply(y, y, dst=y)
-
-    x = x + y
+    # Calculate squared distances using broadcasting
+    x = y[:, None] ** 2 + x[None, :] ** 2
 
     # Calculate gaussian directly into x array
-    cv2.multiply(x, -1 / sigma2, dst=x)
-    cv2.exp(x, dst=x)
+    np.multiply(x, -1 / sigma2, out=x)
+    np.exp(x, out=x)
 
     # Scale by intensity
-    cv2.multiply(x, intensity, dst=x)
-    cv2.add(x, 1, dst=x)
+    np.multiply(x, intensity, out=x)
+    np.add(x, 1, out=x)
 
     if img.ndim == NUM_MULTI_CHANNEL_DIMENSIONS:
-        x = cv2.merge([x] * img.shape[2])
+        x = x[:, :, np.newaxis]
 
     return multiply_by_array(img, x)
 
