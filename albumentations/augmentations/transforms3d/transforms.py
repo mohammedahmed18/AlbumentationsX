@@ -1420,3 +1420,60 @@ class CubicSymmetry(Transform3D):
 
         """
         return f3d.transform_cube_keypoints(keypoints, index, volume_shape=params["volume_shape"])
+
+
+_transformations = (
+    # First 4: rotate around axis 0 (indices 0-3)
+    lambda x: x,
+    lambda x: np.rot90(x, k=1, axes=(1, 2)),
+    lambda x: np.rot90(x, k=2, axes=(1, 2)),
+    lambda x: np.rot90(x, k=3, axes=(1, 2)),
+    # Next 4: flip 180° about axis 1, then rotate around axis 0 (indices 4-7)
+    lambda x: x[::-1, :, ::-1],  # was: np.flip(x, axis=(0, 2))
+    lambda x: np.rot90(np.rot90(x, k=2, axes=(0, 2)), k=1, axes=(1, 2)),
+    lambda x: x[::-1, ::-1, :],  # was: np.flip(x, axis=(0, 1))
+    lambda x: np.rot90(np.rot90(x, k=2, axes=(0, 2)), k=3, axes=(1, 2)),
+    # Next 8: split between 90° and 270° about axis 1, then rotate around axis 2 (indices 8-15)
+    lambda x: np.rot90(x, k=1, axes=(0, 2)),
+    lambda x: np.rot90(np.rot90(x, k=1, axes=(0, 2)), k=1, axes=(0, 1)),
+    lambda x: np.rot90(np.rot90(x, k=1, axes=(0, 2)), k=2, axes=(0, 1)),
+    lambda x: x.transpose(1, 2, 0, *range(3, x.ndim)),
+    lambda x: np.rot90(x, k=-1, axes=(0, 2)),
+    lambda x: np.rot90(np.rot90(x, k=-1, axes=(0, 2)), k=1, axes=(0, 1)),
+    lambda x: np.rot90(np.rot90(x, k=-1, axes=(0, 2)), k=2, axes=(0, 1)),
+    lambda x: np.rot90(np.rot90(x, k=-1, axes=(0, 2)), k=3, axes=(0, 1)),
+    # Final 8: split between rotations about axis 2, then rotate around axis 1 (indices 16-23)
+    lambda x: np.rot90(x, k=1, axes=(0, 1)),
+    lambda x: np.rot90(np.rot90(x, k=1, axes=(0, 1)), k=1, axes=(0, 2)),
+    lambda x: np.rot90(np.rot90(x, k=1, axes=(0, 1)), k=2, axes=(0, 2)),
+    lambda x: x.transpose(2, 0, 1, *range(3, x.ndim)),
+    lambda x: np.rot90(x, k=-1, axes=(0, 1)),
+    lambda x: np.rot90(np.rot90(x, k=-1, axes=(0, 1)), k=1, axes=(0, 2)),
+    lambda x: np.rot90(np.rot90(x, k=-1, axes=(0, 1)), k=2, axes=(0, 2)),
+    lambda x: np.rot90(np.rot90(x, k=-1, axes=(0, 1)), k=3, axes=(0, 2)),
+    # Reflected versions (24-47) - same as above but with initial reflection
+    lambda x: x[:, :, ::-1],  # was: np.flip(x, axis=2)
+    lambda x: x.transpose(0, 2, 1, *range(3, x.ndim)),
+    lambda x: x[:, ::-1, :],  # was: np.flip(x, axis=1)
+    lambda x: np.rot90(x[:, :, ::-1], k=3, axes=(1, 2)),
+    lambda x: x[::-1, :, :],  # was: np.flip(x, axis=0)
+    lambda x: np.rot90(x[::-1, :, :], k=1, axes=(1, 2)),
+    lambda x: x[::-1, ::-1, ::-1],  # was: np.flip(x, axis=(0, 1, 2))
+    lambda x: np.rot90(x[::-1, :, :], k=-1, axes=(1, 2)),
+    lambda x: x.transpose(2, 1, 0, *range(3, x.ndim)),
+    lambda x: x.transpose(1, 2, 0, *range(3, x.ndim))[::-1, :, :],
+    lambda x: x.transpose(2, 1, 0, *range(3, x.ndim))[::-1, ::-1, :],
+    lambda x: x.transpose(1, 2, 0, *range(3, x.ndim))[:, ::-1, :],
+    lambda x: np.rot90(x[:, :, ::-1], k=-1, axes=(0, 2)),
+    lambda x: x.transpose(1, 2, 0, *range(3, x.ndim))[::-1, ::-1, ::-1],
+    lambda x: x.transpose(2, 1, 0, *range(3, x.ndim))[:, ::-1, ::-1],
+    lambda x: x.transpose(1, 2, 0, *range(3, x.ndim))[:, :, ::-1],
+    lambda x: np.rot90(x[:, :, ::-1], k=1, axes=(0, 1)),
+    lambda x: x.transpose(2, 0, 1, *range(3, x.ndim))[:, :, ::-1],
+    lambda x: x.transpose(1, 0, 2, *range(3, x.ndim)),
+    lambda x: x.transpose(2, 0, 1, *range(3, x.ndim))[::-1, :, :],
+    lambda x: np.rot90(x[:, :, ::-1], k=-1, axes=(0, 1)),
+    lambda x: x.transpose(2, 0, 1, *range(3, x.ndim))[:, ::-1, :],
+    lambda x: x.transpose(1, 0, 2, *range(3, x.ndim))[::-1, ::-1, :],
+    lambda x: x.transpose(2, 0, 1, *range(3, x.ndim))[::-1, ::-1, ::-1],
+)
