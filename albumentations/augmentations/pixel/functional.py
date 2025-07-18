@@ -4221,7 +4221,8 @@ def convolve(img: np.ndarray, kernel: np.ndarray) -> np.ndarray:
         np.ndarray: Convolved image.
 
     """
-    conv_fn = maybe_process_in_chunks(cv2.filter2D, ddepth=-1, kernel=kernel)
+    # Directly pass the efficient helper and kernel to maybe_process_in_chunks
+    conv_fn = maybe_process_in_chunks(_convolve_2d, kernel=kernel)
     return conv_fn(img)
 
 
@@ -4242,3 +4243,13 @@ def separable_convolve(img: np.ndarray, kernel: np.ndarray) -> np.ndarray:
     """
     conv_fn = maybe_process_in_chunks(cv2.sepFilter2D, ddepth=-1, kernelX=kernel, kernelY=kernel)
     return conv_fn(img)
+
+
+# Helper to directly convolve without lambda/closure overhead
+def _convolve_2d(img: np.ndarray, kernel: np.ndarray) -> np.ndarray:
+    # Use UMat for acceleration when possible for large arrays
+    if img.size > 1e6:  # arbitrary large image cutoff; tune as needed
+        img_umat = cv2.UMat(img)
+        result_umat = cv2.filter2D(img_umat, ddepth=-1, kernel=kernel, borderType=cv2.BORDER_DEFAULT)
+        return result_umat.get()
+    return cv2.filter2D(img, ddepth=-1, kernel=kernel, borderType=cv2.BORDER_DEFAULT)
