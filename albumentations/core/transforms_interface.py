@@ -844,3 +844,7 @@ class Transform3D(DualTransform):
             "masks3d": self.apply_to_masks3d,
             "keypoints": self.apply_to_keypoints,
         }
+
+
+def apply_to_bboxes(self, bboxes: np.ndarray, **params: Any) -> np.ndarray:
+    return bboxes
