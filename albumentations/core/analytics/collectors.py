@@ -319,7 +319,7 @@ def _extract_transforms_from_compose(transform: Any, transforms: list[str]) -> N
 def _extract_transform_names(transform: Any, transforms: list[str]) -> None:
     """Extract transform names from a single transform."""
     # Get the class name
-    class_name = transform.__class__.__name__
+    class_name = type(transform).__name__
 
     # Skip Lambda transforms
     if class_name == "Lambda":
@@ -329,17 +329,7 @@ def _extract_transform_names(transform: Any, transforms: list[str]) -> None:
     transforms.append(class_name)
 
     # Handle nested structures
-    compose_types = [
-        "Compose",
-        "ReplayCompose",
-        "OneOf",
-        "SomeOf",
-        "Sequential",
-        "SelectiveChannelTransform",
-        "OneOrOther",
-        "RandomOrder",
-    ]
-    if class_name in compose_types:
+    if class_name in _COMPOSE_TYPES:
         _extract_transforms_from_compose(transform, transforms)
 
 
@@ -384,3 +374,15 @@ def collect_pipeline_info(compose: Compose) -> dict[str, Any]:
         "targets": targets,
         "pipeline_hash": pipeline_hash,
     }
+
+
+_COMPOSE_TYPES = {
+    "Compose",
+    "ReplayCompose",
+    "OneOf",
+    "SomeOf",
+    "Sequential",
+    "SelectiveChannelTransform",
+    "OneOrOther",
+    "RandomOrder",
+}
