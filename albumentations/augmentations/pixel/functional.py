@@ -1483,6 +1483,9 @@ def to_gray_desaturation(img: np.ndarray) -> np.ndarray:
         any
 
     """
+    if img.dtype == np.uint8:
+        float_image = img.astype(np.int16, copy=False)
+        return ((np.max(float_image, axis=-1) + np.min(float_image, axis=-1)) >> 1).astype(np.uint8)
     float_image = img.astype(np.float32)
     return (np.max(float_image, axis=-1) + np.min(float_image, axis=-1)) / 2
 
