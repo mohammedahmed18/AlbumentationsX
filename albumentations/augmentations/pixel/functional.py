@@ -11,6 +11,7 @@ from __future__ import annotations
 import math
 import random
 from collections.abc import Sequence
+from functools import lru_cache
 from typing import Any, Literal
 from warnings import warn
 
@@ -1896,13 +1897,13 @@ def adjust_saturation_torchvision(
 
 
 def _adjust_hue_torchvision_uint8(img: np.ndarray, factor: float) -> np.ndarray:
-    img = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
-
-    lut = np.arange(0, 256, dtype=np.int16)
-    lut = np.mod(lut + 180 * factor, 180).astype(np.uint8)
-    img[..., 0] = sz_lut(img[..., 0], lut, inplace=False)
-
-    return cv2.cvtColor(img, cv2.COLOR_HSV2RGB)
+    # Avoid repeated LUT calculation for the same factor
+    img_hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+    lut = _hue_lut_uint8(factor)
+    # In-place LUT for the 0th (hue) channel, minimizing copies
+    img_hsv[..., 0] = sz_lut(img_hsv[..., 0], lut, inplace=True)
+    # Minimize temporaries, directly return result
+    return cv2.cvtColor(img_hsv, cv2.COLOR_HSV2RGB)
 
 
 def adjust_hue_torchvision(img: np.ndarray, factor: float) -> np.ndarray:
@@ -1924,9 +1925,12 @@ def adjust_hue_torchvision(img: np.ndarray, factor: float) -> np.ndarray:
     if img.dtype == np.uint8:
         return _adjust_hue_torchvision_uint8(img, factor)
 
-    img = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
-    img[..., 0] = np.mod(img[..., 0] + factor * 360, 360)
-    return cv2.cvtColor(img, cv2.COLOR_HSV2RGB)
+    img_hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+    # Vectorized, in-place to minimize memory use.
+    h_channel = img_hsv[..., 0]
+    np.add(h_channel, factor * 360, out=h_channel, casting="unsafe")
+    np.mod(h_channel, 360, out=h_channel)
+    return cv2.cvtColor(img_hsv, cv2.COLOR_HSV2RGB)
 
 
 @uint8_io
@@ -4242,3 +4246,10 @@ def separable_convolve(img: np.ndarray, kernel: np.ndarray) -> np.ndarray:
     """
     conv_fn = maybe_process_in_chunks(cv2.sepFilter2D, ddepth=-1, kernelX=kernel, kernelY=kernel)
     return conv_fn(img)
+
+
+@lru_cache(maxsize=64)
+def _hue_lut_uint8(factor: float) -> np.ndarray:
+    """Return a cached LUT for a given factor for performance."""
+    lut = np.arange(0, 256, dtype=np.int16)
+    return np.mod(lut + 180 * factor, 180).astype(np.uint8)
