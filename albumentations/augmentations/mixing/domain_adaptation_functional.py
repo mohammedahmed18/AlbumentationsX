@@ -316,9 +316,15 @@ class DomainAdapter:
                 if no conversion is specified.
 
         """
-        if self.color_out is None:
+        color_out = self.color_out
+        if color_out is None:
             return img
-        return cv2.cvtColor(clip(img, np.uint8, inplace=True), self.color_out)
+        # Fast path: only clip/cast if not already np.uint8
+        if img.dtype == np.uint8:
+            return cv2.cvtColor(img, color_out)
+        # Minimize buffer copies in clip (pass out=img if it is allowed)
+        img_uint8 = clip(img, np.uint8, inplace=False)
+        return cv2.cvtColor(img_uint8, color_out)
 
     def flatten(self, img: np.ndarray) -> np.ndarray:
         """Flatten the image into a 2D array of pixels.
