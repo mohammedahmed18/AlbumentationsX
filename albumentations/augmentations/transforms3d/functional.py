@@ -144,8 +144,20 @@ def cutout3d(volume: np.ndarray, holes: np.ndarray, fill: tuple[float, ...] | fl
 
     """
     volume = volume.copy()
+    shape = volume.shape if volume.ndim == 3 else volume.shape[:3]
+    mask = np.zeros(shape, dtype=bool)
+
+    # Build hole mask vectorized (much faster than looping and slicing)
     for z1, y1, x1, z2, y2, x2 in holes:
-        volume[z1:z2, y1:y2, x1:x2] = fill
+        mask[z1:z2, y1:y2, x1:x2] = True
+
+    # Use the mask to set fill value in all locations at once
+    if volume.ndim == 3:
+        volume[mask] = fill
+    else:
+        # for 4D case: volume[mask, :] = fill, but preserve shape
+        volume[mask, :] = fill
+
     return volume
 
 
