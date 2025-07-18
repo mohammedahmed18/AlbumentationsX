@@ -44,7 +44,7 @@ def delete_random_words(words: list[str], num_words: int, py_random: random.Rand
     if num_words >= len(words):
         return ""
 
-    indices_to_delete = py_random.sample(range(len(words)), num_words)
+    indices_to_delete = set(py_random.sample(range(len(words)), num_words))
     new_words = [word for idx, word in enumerate(words) if idx not in indices_to_delete]
     return " ".join(new_words)
 
