@@ -171,7 +171,8 @@ class HorizontalFlip(DualTransform):
         return fgeometric.keypoints_hflip(keypoints, params["shape"][1])
 
     def apply_to_images(self, images: np.ndarray, **params: Any) -> np.ndarray:
-        return fgeometric.hflip_images(images)
+        # Directly perform horizontal flip using numpy for speed.
+        return np.flip(images, axis=2)
 
     def apply_to_volumes(self, volumes: np.ndarray, **params: Any) -> np.ndarray:
         return fgeometric.hflip_volumes(volumes)
