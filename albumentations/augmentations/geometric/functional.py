@@ -3865,13 +3865,13 @@ def get_fisheye_distortion_maps(
 
     center_x, center_y = width / 2, height / 2
     # Create coordinate grid
-    y, x = np.mgrid[:height, :width].astype(np.float32)
+    y, x = np.indices((height, width), dtype=np.float32)
 
     x = x - center_x
     y = y - center_y
 
     # Calculate polar coordinates
-    r = np.sqrt(x * x + y * y)
+    r = np.hypot(x, y)
     theta = np.arctan2(y, x)
 
     # Normalize radius by the maximum possible radius to keep distortion in check
