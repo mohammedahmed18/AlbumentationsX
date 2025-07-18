@@ -53,14 +53,14 @@ def detect_environment() -> str:
 
     # Check Kaggle
     try:
-        if Path("/kaggle/working").exists():
+        if os.path.exists("/kaggle/working"):
             return "kaggle"
     except OSError:
         pass
 
     # Check Docker
     try:
-        if Path("/.dockerenv").exists() or Path("/proc/self/cgroup").is_file():
+        if os.path.exists("/.dockerenv") or os.path.isfile("/proc/self/cgroup"):
             return "docker"
     except OSError:
         pass
