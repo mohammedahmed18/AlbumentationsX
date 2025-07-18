@@ -2086,6 +2086,10 @@ def pixel_dropout(
         np.ndarray: Image with dropped pixels
 
     """
+    if drop_mask.dtype != bool:
+        drop_mask = drop_mask.astype(bool, copy=False)
+    if drop_values.dtype != image.dtype:
+        drop_values = drop_values.astype(image.dtype, copy=False)
     return np.where(drop_mask, drop_values, image)
 
 
