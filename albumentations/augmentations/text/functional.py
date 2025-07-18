@@ -69,9 +69,11 @@ def swap_random_words(words: list[str], num_words: int, py_random: random.Random
         return " ".join(words)
 
     words = words.copy()
+    indices = list(range(len(words)))
+    sample = py_random.sample
 
     for _ in range(num_words):
-        idx1, idx2 = py_random.sample(range(len(words)), 2)
+        idx1, idx2 = sample(indices, 2)
         words[idx1], words[idx2] = words[idx2], words[idx1]
     return " ".join(words)
 
