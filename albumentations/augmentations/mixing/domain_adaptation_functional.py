@@ -354,8 +354,10 @@ class DomainAdapter:
         """
         pixels = clip(pixels, np.uint8, inplace=True)
         if self.num_channels == 1:
-            return self.from_colorspace(pixels.reshape(height, width))
-        return self.from_colorspace(pixels.reshape(height, width, self.num_channels))
+            reshaped = pixels.reshape(height, width)
+        else:
+            reshaped = pixels.reshape(height, width, self.num_channels)
+        return self.from_colorspace(reshaped)
 
     @staticmethod
     def _pca_sign(x: np.ndarray) -> np.ndarray:
