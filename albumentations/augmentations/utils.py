@@ -15,11 +15,6 @@ from typing import Any, Callable, TypeVar, cast
 
 import cv2
 import numpy as np
-from albucore.utils import (
-    is_grayscale_image,
-    is_multispectral_image,
-    is_rgb_image,
-)
 from typing_extensions import Concatenate, ParamSpec
 
 from albumentations.core.keypoints_utils import angle_to_2pi_range
@@ -94,13 +89,16 @@ def non_rgb_error(image: np.ndarray) -> None:
         >>> non_rgb_error(multispectral_image)  # Raises ValueError stating incompatibility
 
     """
-    if not is_rgb_image(image):
+    # Assume (H, W, C) and dtype=np.uint8 is expected
+    if not (isinstance(image, np.ndarray) and image.ndim == 3 and image.shape[2] == 3):
         message = "This transformation expects 3-channel images"
-        if is_grayscale_image(image):
+        s = image.shape if isinstance(image, np.ndarray) else None
+        # Grayscale check: (H, W) or (H, W, 1)
+        if isinstance(image, np.ndarray) and ((image.ndim == 2) or (image.ndim == 3 and image.shape[2] == 1)):
             message += "\nYou can convert your grayscale image to RGB using cv2.cvtColor(image, cv2.COLOR_GRAY2RGB))"
-        if is_multispectral_image(image):  # Any image with a number of channels other than 1 and 3
+        # Multispectral check: (H, W, C) with C != 1 or 3
+        elif isinstance(image, np.ndarray) and image.ndim == 3 and image.shape[2] != 3:
             message += "\nThis transformation cannot be applied to multi-spectral images"
-
         raise ValueError(message)
 
 
