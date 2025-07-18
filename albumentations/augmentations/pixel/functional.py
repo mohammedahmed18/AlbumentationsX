@@ -3373,12 +3373,14 @@ def create_contrast_lut(
         if cdf[-1] == 0:  # No valid pixels
             return np.arange(256, dtype=np.uint8)
 
-        # Normalize CDF to full range
+        # Normalize CDF to full range using in-place operations
         cdf = (cdf - cdf[0]) * max_value / (cdf[-1] - cdf[0])
+        np.rint(cdf, out=cdf)
+        np.clip(cdf, 0, max_value, out=cdf)
 
         # Create lookup table
         lut = np.zeros(256, dtype=np.uint8)
-        lut[min_intensity : max_intensity + 1] = np.clip(np.round(cdf), 0, max_value).astype(np.uint8)
+        lut[min_intensity : max_intensity + 1] = cdf.astype(np.uint8)
         lut[max_intensity + 1 :] = max_value
         return lut
 
@@ -3387,7 +3389,10 @@ def create_contrast_lut(
     indices = np.arange(256, dtype=float)
     # Changed: Use np.round to get 128 for middle value
     # Test expects [0, 128, 255] for range [0, 2]
-    lut = np.clip(np.round((indices - min_intensity) * scale), 0, max_value).astype(np.uint8)
+    lut = (indices - min_intensity) * scale
+    np.rint(lut, out=lut)
+    np.clip(lut, 0, max_value, out=lut)
+    lut = lut.astype(np.uint8)
     lut[:min_intensity] = 0
     lut[max_intensity + 1 :] = max_value
     return lut
