@@ -2125,7 +2125,8 @@ def spatter_mud(img: np.ndarray, non_mud: np.ndarray, mud: np.ndarray) -> np.nda
         np.ndarray: The spatter mud applied to the image.
 
     """
-    return add(img * non_mud, mud, inplace=False)
+    out = np.multiply(img, non_mud)
+    return add(out, mud, inplace=True)
 
 
 @uint8_io
