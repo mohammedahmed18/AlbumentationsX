@@ -345,15 +345,13 @@ def _extract_transform_names(transform: Any, transforms: list[str]) -> None:
 
 def _get_target_usage(compose: Compose) -> str:
     """Determine target usage from compose processors."""
-    uses_keypoints = "keypoints" in compose.processors
-    uses_bboxes = "bboxes" in compose.processors
-
-    if uses_keypoints and uses_bboxes:
-        return "bboxes_keypoints"
-    if uses_bboxes:
-        return "bboxes"
-    if uses_keypoints:
+    keys = compose.processors
+    if "keypoints" in keys:
+        if "bboxes" in keys:
+            return "bboxes_keypoints"
         return "keypoints"
+    if "bboxes" in keys:
+        return "bboxes"
     return "None"
 
 
