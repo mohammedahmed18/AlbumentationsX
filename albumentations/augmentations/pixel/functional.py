@@ -1518,6 +1518,18 @@ def to_gray_average(img: np.ndarray) -> np.ndarray:
         any
 
     """
+    if img.dtype == np.uint8:
+        out = np.add.reduce(img, axis=-1, dtype=np.uint16)
+        n_chan = img.shape[-1]
+        out = (out // n_chan).astype(np.uint8)
+        return out
+
+    if img.dtype == np.float32 or img.dtype == np.float64:
+        n_chan = img.shape[-1]
+        out = np.add.reduce(img, axis=-1)
+        out /= n_chan
+        return out.astype(img.dtype)
+
     return np.mean(img, axis=-1).astype(img.dtype)
 
 
