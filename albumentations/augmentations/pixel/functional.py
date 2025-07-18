@@ -3945,12 +3945,11 @@ def order_stains_combined(stain_colors: np.ndarray) -> tuple[int, int]:
     angles = np.mod(np.arctan2(stain_colors[:, 1], stain_colors[:, 0]), np.pi)
 
     # Calculate spectral ratios (Ruifrok)
-    blue_ratio = stain_colors[:, 2] / (np.sum(stain_colors, axis=1) + 1e-6)
-    red_ratio = stain_colors[:, 0] / (np.sum(stain_colors, axis=1) + 1e-6)
+    stain_sum = np.sum(stain_colors, axis=1) + 1e-6
+    blue_ratio = stain_colors[:, 2] / stain_sum
+    red_ratio = stain_colors[:, 0] / stain_sum
 
     # Combine scores
-    # High angle and high blue ratio indicates Hematoxylin
-    # Low angle and high red ratio indicates Eosin
     scores = angles * blue_ratio - red_ratio
 
     hematoxylin_idx = np.argmax(scores)
