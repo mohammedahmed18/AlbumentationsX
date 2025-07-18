@@ -87,15 +87,16 @@ def _check_module(module_name: str) -> bool:
 def _check_jupyter() -> bool:
     """Check if running in Jupyter notebook."""
     try:
-        from IPython import get_ipython
+        import IPython
 
-        ipython = get_ipython()
+        ipython = IPython.get_ipython()
         if ipython is None:
             return False
-    except (ImportError, NameError):
+        # Use direct attribute access for speed, avoid string matching where possible
+        cls = type(ipython)
+        return cls.__name__ == "ZMQInteractiveShell" or cls.__name__ == "TerminalInteractiveShell"
+    except Exception:
         return False
-    else:
-        return ipython.__class__.__name__ in ["ZMQInteractiveShell", "TerminalInteractiveShell"]
 
 
 @functools.lru_cache(maxsize=1)
